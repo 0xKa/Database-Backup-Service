@@ -10,6 +10,8 @@ public struct App
 {
     public static string databaseName = string.Empty;
     public static string connectionString = string.Empty;
+    public static int backupIntervalHours = 24;
+
     public static string appLog = string.Empty; // log service lifecycle 
     public static string errorLog = string.Empty;
     public static string backupDir = string.Empty;
@@ -19,6 +21,8 @@ public struct App
     {
         databaseName = config.Value.Database.Name ?? string.Empty;
         connectionString = config.Value.Database.ConnectionString ?? string.Empty;
+        backupIntervalHours = config.Value.Database.BackupIntervalHours ?? 24;
+
         appLog = GetConfiguredFilePath("ApplicationLog", config.Value.Directories.Logs);
         errorLog = GetConfiguredFilePath("ErrorLog", config.Value.Directories.Logs);
 
@@ -42,7 +46,6 @@ public class Worker : BackgroundService
         Initialize(serviceProvider);
         App.InitializeFields(config);
 
-        LogMessage($"backup path: '{App.backupDir}'", "test.log");
     }
 
 
@@ -102,8 +105,9 @@ public class Worker : BackgroundService
                 LogMessage($"Backup error: {ex.Message}", App.errorLog);
             }
 
-            // Wait 24 hours before next backup
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            // Wait hours before next backup
+            await Task.Delay(TimeSpan.FromHours(App.backupIntervalHours), stoppingToken);
+            // await Task.Delay(TimeSpan.FromSeconds(App.backupIntervalHours), stoppingToken);
         }
     }
 

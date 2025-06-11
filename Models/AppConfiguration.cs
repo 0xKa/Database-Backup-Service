@@ -13,6 +13,7 @@ namespace WorkerServiceTemplate.Models
         public string? Name { get; set; }
         public string? Type { get; set; }
         public string? ConnectionString { get; set; }
+        public int? BackupIntervalHours { get; set; } = 24;
     }
 
     public class DirectoryConfig
