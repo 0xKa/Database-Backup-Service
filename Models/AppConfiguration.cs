@@ -19,7 +19,6 @@ namespace WorkerServiceTemplate.Models
     {
         public string ApplicationLog { get; set; } = "app.log";
         public string ErrorLog { get; set; } = "errors.log";
-        public string DatabaseBackup { get; set; } = "database.bak";
     }
 
     public class CustomPathsConfig
@@ -28,6 +27,6 @@ namespace WorkerServiceTemplate.Models
         //can be set to null if not used
         public string? ApplicationLogPath { get; set; }
         public string? ErrorLogPath { get; set; }
-        public string? DatabaseBackupPath { get; set; }
+        public string? DatabaseBackupPath { get; set; } = null; //directory 
     }
 }
