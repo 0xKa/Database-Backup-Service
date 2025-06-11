@@ -8,6 +8,7 @@ namespace WorkerServiceTemplate;
 
 public struct App
 {
+    public static string databaseName = string.Empty;
     public static string connectionString = string.Empty;
     public static string appLog = string.Empty; // log service lifecycle 
     public static string errorLog = string.Empty;
@@ -16,7 +17,8 @@ public struct App
 
     public static void InitializeFields(IOptions<AppConfiguration> config)
     {
-        connectionString = config.Value.connectionString ?? string.Empty;
+        databaseName = config.Value.Database.Name ?? string.Empty;
+        connectionString = config.Value.Database.ConnectionString ?? string.Empty;
         appLog = GetConfiguredFilePath("ApplicationLog", config.Value.Directories.Logs);
         errorLog = GetConfiguredFilePath("ErrorLog", config.Value.Directories.Logs);
 
@@ -44,13 +46,17 @@ public class Worker : BackgroundService
     }
 
 
-    private void DoBackup(object state)
+    private void DoBackup()
     {
         try
         {
-            string backupFile = Path.Combine(App.backupDir, $"MyDbBackup_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+            string backupFile = Path.Combine(App.backupDir, $"{App.databaseName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
             string connectionString = App.connectionString;
-            string sql = $"BACKUP DATABASE [Temp-DB] TO DISK = '{backupFile}' WITH  NAME = 'Full Backup of Temp-DB',FORMAT, SKIP, STATS = 10;";
+            string sql = $"BACKUP DATABASE [{App.databaseName}] TO DISK = '{backupFile}' WITH  NAME = 'Full Backup of Temp-DB',FORMAT, SKIP, STATS = 10;";
+
+            LogMessage($"Backup file path: {backupFile}", App.appLog);
+            LogMessage($"SQL: {sql}", App.appLog);
+
 
             using var connection = new SqlConnection(connectionString);
             using var command = new SqlCommand(sql, connection);
@@ -79,42 +85,26 @@ public class Worker : BackgroundService
     public override Task StopAsync(CancellationToken cancellationToken)
     {
         LogMessage($"Service '{ServiceInternalName}' stopping...", App.appLog);
-
         return base.StopAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // LogMessage($"Service '{ServiceInternalName}' execution started.", Files.appLog);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // ===== WORKER LOGIC GOES HERE =====
-
-                if (_logger.IsEnabled(LogLevel.Information))
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-
-                // ===== END OF WORKER LOGIC =====
-
-                await Task.Delay(5000, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                LogMessage("Worker execution cancelled", App.appLog);
-                break;
+                LogMessage($"Starting backup at: {DateTime.Now}", App.appLog);
+                DoBackup();
             }
             catch (Exception ex)
             {
-                LogMessage($"Error in worker execution: {ex.Message}", App.appLog);
-                _logger.LogError(ex, "Worker execution failed");
-
-                // Wait before retrying to avoid rapid error loops
-                await Task.Delay(10000, stoppingToken);
+                LogMessage($"Backup error: {ex.Message}", App.errorLog);
             }
-        }
 
-        // LogMessage($"Service '{ServiceInternalName}' execution ended", Files.appLog);
+            // Wait 24 hours before next backup
+            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+        }
     }
+
 }

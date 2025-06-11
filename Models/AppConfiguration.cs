@@ -2,10 +2,17 @@ namespace WorkerServiceTemplate.Models
 {
     public class AppConfiguration
     {
-        public string? connectionString { get; set; }
+        public DatabaseConfig Database { get; set; } = new();
         public DirectoryConfig Directories { get; set; } = new();
         public FileConfig Files { get; set; } = new();
         public CustomPathsConfig CustomPaths { get; set; } = new();
+    }
+
+    public class DatabaseConfig
+    {
+        public string? Name { get; set; }
+        public string? Type { get; set; }
+        public string? ConnectionString { get; set; }
     }
 
     public class DirectoryConfig
